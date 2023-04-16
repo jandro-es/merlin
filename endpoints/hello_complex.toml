@@ -1,9 +1,0 @@
-path = "/complex"
-method = "GET"
-params = ["name", "age"]
-[response]
-fields = ["message"]
-
-# [auth]
-# service = "auth-service"
-# endpoint = "/auth"

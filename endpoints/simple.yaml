@@ -1,0 +1,12 @@
+path: /simple
+method: GET
+parameters:
+  - name
+  - age
+response:
+  headers:
+    Content-Type: application/json
+    X-Custom-Header: some-value
+  body:
+    name: "{{src_name}}"
+    age: "{{src_age}}"

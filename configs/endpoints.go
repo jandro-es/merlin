@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/BurntSushi/toml"
 	"github.com/jandro-es/merlin/models"
+	"gopkg.in/yaml.v3"
 )
 
 var Configurations *models.EndpointConfigs = ParseConfigurations()
@@ -26,6 +26,7 @@ func ParseConfigurations() *models.EndpointConfigs {
 			log.Fatalf("Failed to read the file %s with error %s", file.Name(), err)
 		}
 		config, err := parseEndpointConfigurations(configData)
+
 		if err != nil {
 			log.Fatalf("Failed to parse the configuration for %s with error %s", file.Name(), err)
 		}
@@ -38,7 +39,7 @@ func ParseConfigurations() *models.EndpointConfigs {
 
 func parseEndpointConfigurations(data []byte) (models.EndpointConfig, error) {
 	var config models.EndpointConfig
-	if err := toml.Unmarshal(data, &config); err != nil {
+	if err := yaml.Unmarshal(data, &config); err != nil {
 		return models.EndpointConfig{}, err
 	}
 	return config, nil
