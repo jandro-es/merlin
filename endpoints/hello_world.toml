@@ -1,0 +1,9 @@
+path = "/hello"
+method = "GET"
+params = ["name"]
+[response]
+fields = ["message"]
+
+# [auth]
+# service = "auth-service"
+# endpoint = "/auth"
