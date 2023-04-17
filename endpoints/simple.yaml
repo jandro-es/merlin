@@ -10,3 +10,4 @@ response:
   body:
     name: "{{src_name}}"
     age: "{{src_age}}"
+    static: "static value"
