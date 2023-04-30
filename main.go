@@ -27,6 +27,7 @@ func main() {
 		routes.GovernanceRoutes(router)
 		routes.ConfigurableRoutes(router)
 		router.Use(middleware.HeadersValidator)
+		router.Use(middleware.Subrequests)
 		router.Use(middleware.ContentTypeApplicationJsonMiddleware)
 		router.Use(middleware.PassthroughHeaders)
 		err := http.ListenAndServe(fmt.Sprintf(":%d", 9090), router)

@@ -1,5 +1,6 @@
 path: /simple
 method: GET
+# Headers of the endpoint
 headers:
   Content-Type:
     required: true
@@ -17,9 +18,41 @@ headers:
     passthrough: false
     validation:
       type: uuid
+# Parameters of the endpoint
 parameters:
   - name
   - age
+# Sub request that the endpoint needs to execute before returning a response
+requests:
+  first-request:
+    url: http://127.0.0.1:8080/alias/<original_name>
+    method: GET
+    headers:
+      session-id:
+        passthrough: true
+      request-id:
+        passthrough: false
+        generation:
+          type: uuid
+    parameters:
+      original_name:
+        type: url
+        value: "{{src_name}}"
+  second-request:
+    url: http://127.0.0.1:8080/alias/<original_name>
+    method: GET
+    headers:
+      session-id:
+        passthrough: true
+      request-id:
+        passthrough: false
+        generation:
+          type: uuid
+    parameters:
+      original_name:
+        type: url
+        value: "{{src_name}}"
+# Definition of the response of the endpoint
 response:
   headers:
     X-Custom-Header: some-value
