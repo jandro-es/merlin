@@ -23,7 +23,6 @@ parameters:
 response:
   headers:
     X-Custom-Header: some-value
-    session-id: "{{src_session-identifier}}"
   body:
     name: "{{src_name}}"
     age: "{{src_age}}"

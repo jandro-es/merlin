@@ -16,7 +16,7 @@ type RequestHeader struct {
 }
 
 type RequestHeaderValidation struct {
-	Type  string `yaml:"required"`
+	Type  string `yaml:"type"`
 	Value string `yaml:"value,omitempty"`
 }
 

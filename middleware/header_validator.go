@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jandro-es/merlin/configs"
+	"github.com/jandro-es/merlin/models"
 )
 
 // Validates that the headers of the request matches the ones specified.
@@ -19,15 +20,6 @@ func HeadersValidator(next http.Handler) http.Handler {
 			http.Error(w, "Endpoint not found", http.StatusNotFound)
 			return
 		}
-		// // Check for required headers
-		// for key := range endpointConfig.Headers {
-		// 	if endpointConfig.Headers[key].Required {
-		// 		if r.Header.Get(key) == "" {
-		// 			http.Error(w, fmt.Sprintf("Missing required header '%s'", key), http.StatusBadRequest)
-		// 			return
-		// 		}
-		// 	}
-		// }
 		// Validate the supplied headers agains the definition checking their required values and if they are required or not
 		for key := range endpointConfig.Headers {
 			requestHeader := r.Header.Get(key)
@@ -36,30 +28,38 @@ func HeadersValidator(next http.Handler) http.Handler {
 					http.Error(w, fmt.Sprintf("Missing required header '%s'", key), http.StatusBadRequest)
 					return
 				}
-			}
-			_, err := validateHeaderValue(key, requestHeader, endpointConfig.Headers[key].Validation)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
+				_, err := validateHeaderValue(key, requestHeader, endpointConfig.Headers[key].Validation)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+			} else {
+				if requestHeader != "" {
+					_, err := validateHeaderValue(key, requestHeader, endpointConfig.Headers[key].Validation)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+				}
 			}
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-func validateHeaderValue(headerKey string, headerValue string, validation RequestHeaderValidation) (bool, error) {
+func validateHeaderValue(headerKey string, headerValue string, validation models.RequestHeaderValidation) (bool, error) {
 	switch validation.Type {
 	case "string":
 		if headerValue != validation.Value {
-			return false, fmt.Errorf("Header %s is not valid", headerKey)
+			return false, fmt.Errorf("header %s is not valid", headerKey)
 		}
 	case "uuid":
 		_, err := uuid.Parse(headerValue)
 		if err != nil {
-			return false, fmt.Errorf("Header %s is not valid UUID", headerKey)
+			return false, fmt.Errorf("header %s is not valid UUID", headerKey)
 		}
 	default:
-		log.Fatalf("The validation type for the header is not supported: %s", validation.Type)
+		log.Fatalf("The validation type for the header %s is not supported: %s", headerKey, validation.Type)
 		os.Exit(1)
 	}
 	return true, nil
