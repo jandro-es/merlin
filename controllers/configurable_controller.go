@@ -17,7 +17,7 @@ import (
 func ConfigurableHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		// Get the endpoint configuration based on the request path and method
-		endpointConfig, ok := configs.Configurations.Endpoints[r.Method+r.URL.Path]
+		endpointConfig, ok := configs.FindConfiguration(r.Method, r.URL.Path)
 		if !ok {
 			http.Error(rw, "Endpoint not found", http.StatusNotFound)
 			return

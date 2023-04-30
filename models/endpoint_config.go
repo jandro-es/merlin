@@ -1,11 +1,23 @@
 package models
 
 type EndpointConfig struct {
-	Path       string         `yaml:"path"`
-	Method     string         `yaml:"method"`
-	Parameters []string       `yaml:"parameters,omitempty"`
-	Auth       bool           `yaml:"auth,omitempty"`
-	Response   ResponseConfig `yaml:"response"`
+	Path       string                   `yaml:"path"`
+	Method     string                   `yaml:"method"`
+	Headers    map[string]RequestHeader `yaml:"headers"`
+	Parameters []string                 `yaml:"parameters,omitempty"`
+	Auth       bool                     `yaml:"auth,omitempty"`
+	Response   ResponseConfig           `yaml:"response"`
+}
+
+type RequestHeader struct {
+	Required    bool                    `yaml:"required"`
+	Passthrough bool                    `yaml:"passthrough"`
+	Validation  RequestHeaderValidation `yaml:"validation"`
+}
+
+type RequestHeaderValidation struct {
+	Type  string `yaml:"required"`
+	Value string `yaml:"value,omitempty"`
 }
 
 type ResponseConfig struct {

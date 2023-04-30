@@ -1,12 +1,25 @@
 path: /complex
 method: GET
+headers:
+  Content-Type:
+    required: true
+    passthrough: false
+    validation:
+      type: string
+      value: "application/json"
+  session-id:
+    required: true
+    passthrough: true
+    validation:
+      type: uuid
 parameters:
   - name
   - age
 response:
   headers:
-    Content-Type: application/json
     X-Custom-Header: some-value
+    session-id: "{{src_session-identifier}}"
   body:
     name: "{{src_name}}"
     age: "{{src_age}}"
+    static: "static value"

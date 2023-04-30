@@ -37,6 +37,15 @@ func ParseConfigurations() *models.EndpointConfigs {
 	return &endpointConfigs
 }
 
+// Get the endpoint configuration based on the request path and method
+func FindConfiguration(method string, path string) (models.EndpointConfig, bool) {
+	endpointConfig, ok := Configurations.Endpoints[method+path]
+	if !ok {
+		return models.EndpointConfig{}, false
+	}
+	return endpointConfig, true
+}
+
 func parseEndpointConfigurations(data []byte) (models.EndpointConfig, error) {
 	var config models.EndpointConfig
 	if err := yaml.Unmarshal(data, &config); err != nil {

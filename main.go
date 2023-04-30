@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jandro-es/merlin/configs"
 	"github.com/jandro-es/merlin/helpers"
+	"github.com/jandro-es/merlin/middleware"
 	"github.com/jandro-es/merlin/routes"
 )
 
@@ -25,7 +26,9 @@ func main() {
 	go func() {
 		routes.GovernanceRoutes(router)
 		routes.ConfigurableRoutes(router)
-
+		router.Use(middleware.HeadersValidator)
+		router.Use(middleware.ContentTypeApplicationJsonMiddleware)
+		router.Use(middleware.PassthroughHeaders)
 		err := http.ListenAndServe(fmt.Sprintf(":%d", 9090), router)
 		helpers.ExitOnFail(err, "Failed to start HTTP server")
 	}()
