@@ -1,9 +1,11 @@
 import os
-from bottle import route, run, template
+from bottle import route, run, template, request
 import random
 
 @route('/alias/<name>')
 def alias(name):
+    for header, value in request.headers.items():
+        print(f"{header}: {value}")
     name_list = list(name)
     name_list[random.randint(0, (len(name_list) - 1))] = "T"
     new_name = str(name_list).replace('[', "").replace(']', "").replace("'", "").replace(",", "").replace(" ", "")

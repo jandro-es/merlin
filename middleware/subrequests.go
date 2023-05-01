@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,10 +10,15 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jandro-es/merlin/configs"
+	"github.com/jandro-es/merlin/helpers"
 	"github.com/jandro-es/merlin/models"
 )
+
+type contextKey string
 
 func Subrequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -39,43 +45,25 @@ func Subrequests(next http.Handler) http.Handler {
 				for key, requestConfig := range requests {
 					values := parseParameterValues(requestConfig, r)
 					wg.Add(1)
-					go executeRequest(key, requestConfig, values, &wg, &mu, &results)
+					go executeRequest(key, requestConfig, values, r, &wg, &mu, &results)
 				}
-				// Loop through the URLs and execute the HTTP requests
-				// for _, url := range urls {
-				// 	// Increment the wait group counter
-				// 	wg.Add(1)
-				// 	// Execute the HTTP request asynchronously
-				// 	go func(url string) {
-				// 		defer wg.Done()
-
-				// 		// Send the HTTP request
-				// 		resp, err := http.Get(url)
-
-				// 		if err != nil {
-				// 			fmt.Printf("Error fetching %s: %s\n", url, err.Error())
-				// 			return
-				// 		}
-
-				// 		// Read the response body
-				// 		body := make([]byte, resp.ContentLength)
-				// 		resp.Body.Read(body)
-
-				// 		// Lock the results slice to add the response body
-				// 		mu.Lock()
-				// 		results = append(results, string(body))
-				// 		mu.Unlock()
-				// 	}(url)
-				// }
 			}
 			buildAndExecuteRequests(requests)
 			// Wait for all the HTTP requests to complete
 			wg.Wait()
-			for i, result := range results {
-				fmt.Printf("Response %s: %s\n", i, result)
+
+			ctx := r.Context()
+			// Add the different requests responses to the context
+			for key, result := range results {
+				ctx = context.WithValue(ctx, contextKey(key), result)
+				fmt.Printf("Response %s: %s\n", key, result)
 			}
+			// Pass the context object to the next middleware and the handler
+			next.ServeHTTP(w, r.WithContext(ctx))
+		} else {
+			// No subrequests to perform
+			next.ServeHTTP(w, r)
 		}
-		next.ServeHTTP(w, r)
 	})
 }
 
@@ -136,7 +124,7 @@ func processVariable(variable string, r *http.Request) string {
 	return value
 }
 
-func executeRequest(key string, requestConfig models.SubRequestConfig, values map[string]string, wg *sync.WaitGroup, mutex *sync.Mutex, results *map[string]string) {
+func executeRequest(key string, requestConfig models.SubRequestConfig, values map[string]string, r *http.Request, wg *sync.WaitGroup, mutex *sync.Mutex, results *map[string]string) {
 	// We need to replace the URL parameters if there are any
 	re := regexp.MustCompile("<([^>]+)>")
 	parsedUrl := re.ReplaceAllStringFunc(requestConfig.Path, func(match string) string {
@@ -153,9 +141,19 @@ func executeRequest(key string, requestConfig models.SubRequestConfig, values ma
 
 	defer wg.Done()
 
+	client := &http.Client{
+		Timeout: time.Second * 15,
+	}
+	req, err := http.NewRequest(requestConfig.Method, parsedUrl, nil)
+	if err != nil {
+		helpers.ExitOnFail(err, "Error while creating the request for the subrequest")
+	}
+	// We need to add the relevant headers as per the definition
+	setSubRequestHeaders(req, requestConfig, r)
 	// Send the HTTP request
-	resp, err := http.Get(parsedUrl)
+	resp, err := client.Do(req)
 
+	// TODO: Manage error properly
 	if err != nil {
 		fmt.Printf("Error fetching %s: %s\n", parsedUrl, err.Error())
 		return
@@ -171,4 +169,22 @@ func executeRequest(key string, requestConfig models.SubRequestConfig, values ma
 	(*results)[key] = string(body)
 	// *results = append(*results, string(body))
 	mutex.Unlock()
+}
+
+func setSubRequestHeaders(req *http.Request, requestConfig models.SubRequestConfig, r *http.Request) {
+	req.Header.Set("user-agent", "merlin")
+	req.Header.Set("Content-Type", "application/json")
+	for key, headerConfig := range requestConfig.Headers {
+		if headerConfig.Passthrough {
+			req.Header.Set(key, r.Header.Get(key))
+		} else {
+			switch headerConfig.Generation.Type {
+			case "uuid":
+				req.Header.Set(key, uuid.New().String())
+			default:
+				log.Fatalf("The generation type for the header %s is not supported: %s", key, headerConfig.Generation.Type)
+				os.Exit(1)
+			}
+		}
+	}
 }
