@@ -21,11 +21,6 @@ type RequestHeaderValidation struct {
 	Value string `yaml:"value,omitempty"`
 }
 
-type ResponseConfig struct {
-	Headers map[string]string `yaml:"headers,omitempty"`
-	Body    interface{}       `yaml:"body"`
-}
-
 type EndpointConfigs struct {
 	Endpoints map[string]EndpointConfig
 }

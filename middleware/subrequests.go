@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -38,7 +39,7 @@ func Subrequests(next http.Handler) http.Handler {
 			// Create a mutex object to protect the results slice
 			var mu sync.Mutex
 			// Create a slice to hold the response objects
-			results := make(map[string]string)
+			results := make(map[string]map[string]interface{})
 
 			buildAndExecuteRequests := func(requests map[string]models.SubRequestConfig) {
 				// We loop through the SubRequestConfigs
@@ -58,6 +59,14 @@ func Subrequests(next http.Handler) http.Handler {
 				ctx = context.WithValue(ctx, contextKey(key), result)
 				fmt.Printf("Response %s: %s\n", key, result)
 			}
+			fmt.Println("Map contents1:")
+			for key, value := range ctx.Value("firstRequest").(map[string]interface{}) {
+				fmt.Printf("%s: %s\n", key, value)
+			}
+			for key, value := range ctx.Value("secondRequest").(map[string]interface{}) {
+				fmt.Printf("%s: %s\n", key, value)
+			}
+
 			// Pass the context object to the next middleware and the handler
 			next.ServeHTTP(w, r.WithContext(ctx))
 		} else {
@@ -124,7 +133,7 @@ func processVariable(variable string, r *http.Request) string {
 	return value
 }
 
-func executeRequest(key string, requestConfig models.SubRequestConfig, values map[string]string, r *http.Request, wg *sync.WaitGroup, mutex *sync.Mutex, results *map[string]string) {
+func executeRequest(key string, requestConfig models.SubRequestConfig, values map[string]string, r *http.Request, wg *sync.WaitGroup, mutex *sync.Mutex, results *map[string]map[string]interface{}) {
 	// We need to replace the URL parameters if there are any
 	re := regexp.MustCompile("<([^>]+)>")
 	parsedUrl := re.ReplaceAllStringFunc(requestConfig.Path, func(match string) string {
@@ -166,7 +175,15 @@ func executeRequest(key string, requestConfig models.SubRequestConfig, values ma
 	// Lock the results slice to add the response body
 	mutex.Lock()
 	fmt.Printf("RESULTS: %s\n", string(body))
-	(*results)[key] = string(body)
+	var resultsMap map[string]interface{}
+	// Unmarshal the JSON data into the map
+	marshalErr := json.Unmarshal(body, &resultsMap)
+	if marshalErr != nil {
+		fmt.Print("Error marshalling the response")
+		// TODO: Proper error handling
+	}
+
+	(*results)[key] = resultsMap
 	// *results = append(*results, string(body))
 	mutex.Unlock()
 }

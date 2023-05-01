@@ -1,5 +1,6 @@
 path: /complex
 method: GET
+# Headers of the endpoint
 headers:
   Content-Type:
     required: true
@@ -12,14 +13,73 @@ headers:
     passthrough: true
     validation:
       type: uuid
+  correlation-id:
+    required: false
+    passthrough: false
+    validation:
+      type: uuid
+# Parameters of the endpoint
 parameters:
   - name
   - age
+# Sub request that the endpoint needs to execute before returning a response
+requests:
+  firstRequest:
+    url: http://127.0.0.1:8080/alias/<original_name>
+    method: GET
+    headers:
+      session-id:
+        passthrough: true
+      request-id:
+        passthrough: false
+        generation:
+          type: uuid
+    parameters:
+      original_name:
+        type: url
+        value: "{{src_name}}"
+  secondRequest:
+    url: http://127.0.0.1:8080/alias/<original_name>
+    method: GET
+    headers:
+      session-id:
+        passthrough: true
+      request-id:
+        passthrough: false
+        generation:
+          type: uuid
+    parameters:
+      original_name:
+        type: url
+        value: "{{src_name}}"
+# Definition of the response of the endpoint
 response:
   headers:
-    X-Custom-Header: some-value
-    session-id: "{{src_session-identifier}}"
-  body:
-    name: "{{src_name}}"
-    age: "{{src_age}}"
-    static: "static value"
+    X-Custom-Header:
+      passthrough: false
+      generation:
+        type: static
+        value: "merlin-generated-response"
+    session-id:
+      passthrough: true
+    request-id:
+      passthrough: false
+      generation:
+        type: uuid
+  values:
+    alias:
+      passthrough: false
+      generation:
+        type: subrequest
+        origin: firstRequest
+        field: alias
+    alias_aternative:
+      passthrough: false
+      generation:
+        type: subrequest
+        origin: secondRequest
+        field: alias
+    name:
+      passthrough: true
+    age:
+      passthrough: true
