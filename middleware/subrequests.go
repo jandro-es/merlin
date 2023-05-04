@@ -19,8 +19,6 @@ import (
 	"github.com/jandro-es/merlin/models"
 )
 
-type contextKey string
-
 func Subrequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get the endpoint configuration based on the request path and method
@@ -33,7 +31,6 @@ func Subrequests(next http.Handler) http.Handler {
 		// We get all the different subrequests for the endpoint
 		requests := endpointConfig.SubRequests
 		if len(requests) != 0 {
-			fmt.Println("WE HAVE REQUESTS")
 			// Create a wait group object
 			var wg sync.WaitGroup
 			// Create a mutex object to protect the results slice
@@ -54,24 +51,19 @@ func Subrequests(next http.Handler) http.Handler {
 			wg.Wait()
 
 			ctx := r.Context()
-			// Add the different requests responses to the context
+			keys := make([]string, 0, len(results))
 			for key, result := range results {
-				ctx = context.WithValue(ctx, contextKey(key), result)
-				fmt.Printf("Response %s: %s\n", key, result)
+				keys = append(keys, key)
+				ctx = context.WithValue(ctx, key, result)
 			}
-			fmt.Println("Map contents1:")
-			for key, value := range ctx.Value("firstRequest").(map[string]interface{}) {
-				fmt.Printf("%s: %s\n", key, value)
-			}
-			for key, value := range ctx.Value("secondRequest").(map[string]interface{}) {
-				fmt.Printf("%s: %s\n", key, value)
-			}
+			ctx = context.WithValue(ctx, "subRequests", keys)
 
 			// Pass the context object to the next middleware and the handler
 			next.ServeHTTP(w, r.WithContext(ctx))
 		} else {
 			// No subrequests to perform
-			next.ServeHTTP(w, r)
+			ctx := r.Context()
+			next.ServeHTTP(w, r.WithContext(ctx))
 		}
 	})
 }
@@ -87,7 +79,6 @@ func parseParameterValues(requestConfig models.SubRequestConfig, r *http.Request
 			values[key] = parameterConfig.Value
 		}
 	}
-	fmt.Printf("VALUES: %s\n", values)
 	return values
 }
 
@@ -145,7 +136,6 @@ func executeRequest(key string, requestConfig models.SubRequestConfig, values ma
 		}
 		return match
 	})
-	fmt.Printf("PARSED URL: %s\n", parsedUrl)
 	// TODO: do the same for query string parameters
 
 	defer wg.Done()
@@ -169,21 +159,29 @@ func executeRequest(key string, requestConfig models.SubRequestConfig, values ma
 	}
 
 	// Read the response body
-	body := make([]byte, resp.ContentLength)
-	resp.Body.Read(body)
+	// body := make([]byte, resp.ContentLength)
+	// resp.Body.Read(body)
 
 	// Lock the results slice to add the response body
 	mutex.Lock()
-	fmt.Printf("RESULTS: %s\n", string(body))
-	var resultsMap map[string]interface{}
-	// Unmarshal the JSON data into the map
-	marshalErr := json.Unmarshal(body, &resultsMap)
-	if marshalErr != nil {
-		fmt.Print("Error marshalling the response")
+	// fmt.Printf("RESULTS: %s\n", string(body))
+
+	var result map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		fmt.Print("Error parsing the response")
+		// http.Error(w, err.Error(), http.StatusInternalServerError)
 		// TODO: Proper error handling
 	}
 
-	(*results)[key] = resultsMap
+	// var resultsMap map[string]interface{}
+	// // Unmarshal the JSON data into the map
+	// marshalErr := json.Unmarshal(body, &resultsMap)
+	// if marshalErr != nil {
+	// 	fmt.Print("Error marshalling the response")
+	// 	// TODO Proper err
+	// }
+	(*results)[key] = result
 	// *results = append(*results, string(body))
 	mutex.Unlock()
 }

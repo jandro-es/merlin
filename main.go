@@ -24,12 +24,12 @@ func main() {
 	configs.ParseConfigurations()
 
 	go func() {
-		routes.GovernanceRoutes(router)
-		routes.ConfigurableRoutes(router)
 		router.Use(middleware.HeadersValidator)
 		router.Use(middleware.Subrequests)
 		router.Use(middleware.ContentTypeApplicationJsonMiddleware)
 		router.Use(middleware.PassthroughHeaders)
+		routes.GovernanceRoutes(router)
+		routes.ConfigurableRoutes(router)
 		err := http.ListenAndServe(fmt.Sprintf(":%d", 9090), router)
 		helpers.ExitOnFail(err, "Failed to start HTTP server")
 	}()

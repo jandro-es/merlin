@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,8 +11,6 @@ import (
 	"github.com/jandro-es/merlin/configs"
 	"github.com/jandro-es/merlin/models"
 )
-
-type contextKey string
 
 func ConfigurableHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
@@ -35,12 +32,16 @@ func ConfigurableHandler() http.HandlerFunc {
 				return
 			}
 		}
+		// Results map from any subrequest
+		results := make(map[string]map[string]interface{})
 
-		// Retrieve the existing context object
-		ctx := r.Context()
+		subRequests := r.Context().Value("subRequests").([]string)
+		for _, value := range subRequests {
+			results[value] = r.Context().Value(value).(map[string]interface{})
+		}
 
 		// Convert response payload to JSON
-		responsePayloadJSON, err := json.Marshal(generateResponse(endpointConfig, params, ctx))
+		responsePayloadJSON, err := json.Marshal(generateResponse(endpointConfig, params, results))
 		if err != nil {
 			http.Error(rw, "Failed to marshal response payload to JSON", http.StatusInternalServerError)
 			return
@@ -67,24 +68,17 @@ func ConfigurableHandler() http.HandlerFunc {
 	}
 }
 
-func generateResponse(requestConfig models.EndpointConfig, params url.Values, context context.Context) map[string]interface{} {
+func generateResponse(requestConfig models.EndpointConfig, params url.Values, results map[string]map[string]interface{}) map[string]interface{} {
 	// Build response payload
 	responsePayload := make(map[string]interface{})
 	for key, config := range requestConfig.Response.Values {
 		if config.Passthrough {
 			// Value is passed directly for the original request
 			responsePayload[key] = params.Get(key)
-			fmt.Printf("PASS VALUE %s: %s\n", key, params.Get(key))
 		} else {
 			switch config.Generation.Type {
 			case "subrequest":
-				// requestValue := context.Value(contextKey(config.Generation.Origin)).(string)
-				fmt.Printf("CONTEXT VALUE %s: %s\n", key, config.Generation.Origin)
-				fmt.Println("Map contents:")
-				for key, value := range context.Value(config.Generation.Origin).(map[string]string) {
-					fmt.Printf("%s: %s\n", key, value)
-				}
-				// responsePayload[key] = context.Value(contextKey(config.Generation.Origin)).(map[string]interface{})
+				responsePayload[key] = results[config.Generation.Origin][config.Generation.Field]
 			default:
 				log.Fatalf("The generation type for the value %s is not supported: %s", key, config.Generation.Type)
 				os.Exit(1)

@@ -23,6 +23,7 @@ func PassthroughHeaders(next http.Handler) http.Handler {
 				w.Header().Set(key, requestHeader)
 			}
 		}
-		next.ServeHTTP(w, r)
+		ctx := r.Context()
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
