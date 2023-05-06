@@ -22,13 +22,17 @@ func main() {
 	router := mux.NewRouter()
 	// configs.ConnectDB()
 	configs.ParseConfigurations()
+	configs.SetupFirebase()
 
 	go func() {
 		router.Use(middleware.HeadersValidator)
+		router.Use(middleware.AuthValidator)
 		router.Use(middleware.Subrequests)
 		router.Use(middleware.ContentTypeApplicationJsonMiddleware)
 		router.Use(middleware.PassthroughHeaders)
 		routes.GovernanceRoutes(router)
+		// TODO: Only include it in dev mode
+		routes.LoginRoutes(router)
 		routes.ConfigurableRoutes(router)
 		err := http.ListenAndServe(fmt.Sprintf(":%d", 9090), router)
 		helpers.ExitOnFail(err, "Failed to start HTTP server")

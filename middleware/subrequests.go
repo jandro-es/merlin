@@ -21,6 +21,11 @@ import (
 
 func Subrequests(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		if !strings.Contains(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
 		// Get the endpoint configuration based on the request path and method
 		endpointConfig, ok := configs.FindConfiguration(r.Method, r.URL.Path)
 		if !ok {
@@ -50,7 +55,6 @@ func Subrequests(next http.Handler) http.Handler {
 			// Wait for all the HTTP requests to complete
 			wg.Wait()
 
-			ctx := r.Context()
 			keys := make([]string, 0, len(results))
 			for key, result := range results {
 				keys = append(keys, key)
@@ -158,13 +162,8 @@ func executeRequest(key string, requestConfig models.SubRequestConfig, values ma
 		return
 	}
 
-	// Read the response body
-	// body := make([]byte, resp.ContentLength)
-	// resp.Body.Read(body)
-
 	// Lock the results slice to add the response body
 	mutex.Lock()
-	// fmt.Printf("RESULTS: %s\n", string(body))
 
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
@@ -173,16 +172,7 @@ func executeRequest(key string, requestConfig models.SubRequestConfig, values ma
 		// http.Error(w, err.Error(), http.StatusInternalServerError)
 		// TODO: Proper error handling
 	}
-
-	// var resultsMap map[string]interface{}
-	// // Unmarshal the JSON data into the map
-	// marshalErr := json.Unmarshal(body, &resultsMap)
-	// if marshalErr != nil {
-	// 	fmt.Print("Error marshalling the response")
-	// 	// TODO Proper err
-	// }
 	(*results)[key] = result
-	// *results = append(*results, string(body))
 	mutex.Unlock()
 }
 
@@ -201,5 +191,11 @@ func setSubRequestHeaders(req *http.Request, requestConfig models.SubRequestConf
 				os.Exit(1)
 			}
 		}
+	}
+
+	// Special case is the authorization header, if auth is required we need to passthough the athorization
+	// header from the request.
+	if requestConfig.Auth {
+		req.Header.Set("Authorization", r.Header.Get("Authorization"))
 	}
 }

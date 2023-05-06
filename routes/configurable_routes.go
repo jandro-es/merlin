@@ -13,7 +13,7 @@ import (
 
 func ConfigurableRoutes(router *mux.Router) {
 	for _, endpointConfig := range configs.Configurations.Endpoints {
-		router.Handle(endpointConfig.Path, handlers.LoggingHandler(os.Stdout, http.HandlerFunc(controllers.ConfigurableHandler()))).Methods(endpointConfig.Method)
+		router.Handle("/api"+endpointConfig.Path, handlers.LoggingHandler(os.Stdout, http.HandlerFunc(controllers.ConfigurableHandler()))).Methods(endpointConfig.Method)
 		log.Printf("Route loaded for path %s with HTTP method: %s", endpointConfig.Path, endpointConfig.Method)
 	}
 }

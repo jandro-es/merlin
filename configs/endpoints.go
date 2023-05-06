@@ -3,6 +3,7 @@ package configs
 import (
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/jandro-es/merlin/models"
 	"gopkg.in/yaml.v3"
@@ -39,6 +40,8 @@ func ParseConfigurations() *models.EndpointConfigs {
 
 // Get the endpoint configuration based on the request path and method
 func FindConfiguration(method string, path string) (models.EndpointConfig, bool) {
+	// We need to remove the added api path
+	path = strings.ReplaceAll(path, "/api", "")
 	endpointConfig, ok := Configurations.Endpoints[method+path]
 	if !ok {
 		return models.EndpointConfig{}, false

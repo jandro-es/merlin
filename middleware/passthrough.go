@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/jandro-es/merlin/configs"
 )
@@ -9,6 +10,11 @@ import (
 // Middleware function to pass the origin headers to the response as defined.
 func PassthroughHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		if !strings.Contains(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
 		// Get the endpoint configuration based on the request path and method
 		endpointConfig, ok := configs.FindConfiguration(r.Method, r.URL.Path)
 		if !ok {
@@ -23,7 +29,6 @@ func PassthroughHeaders(next http.Handler) http.Handler {
 				w.Header().Set(key, requestHeader)
 			}
 		}
-		ctx := r.Context()
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

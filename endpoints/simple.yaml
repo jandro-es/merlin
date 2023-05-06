@@ -1,5 +1,7 @@
 path: /simple
 method: GET
+auth: true
+auth_provider: firebase
 # Headers of the endpoint
 headers:
   Content-Type:
@@ -26,6 +28,7 @@ parameters:
 requests:
   firstRequest:
     url: http://127.0.0.1:8080/alias/<original_name>
+    auth: true
     method: GET
     headers:
       session-id:

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jandro-es/merlin/configs"
@@ -14,6 +15,11 @@ import (
 // Validates that the headers of the request matches the ones specified.
 func HeadersValidator(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		if !strings.Contains(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
 		// Get the endpoint configuration based on the request path and method
 		endpointConfig, ok := configs.FindConfiguration(r.Method, r.URL.Path)
 		if !ok {
@@ -43,7 +49,6 @@ func HeadersValidator(next http.Handler) http.Handler {
 				}
 			}
 		}
-		ctx := r.Context()
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
