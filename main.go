@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/jandro-es/merlin/configs"
+	"github.com/jandro-es/merlin/consumers"
 	"github.com/jandro-es/merlin/helpers"
 	"github.com/jandro-es/merlin/middleware"
 	"github.com/jandro-es/merlin/routes"
@@ -18,6 +19,9 @@ func main() {
 	doneCh := make(chan bool, 1)
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	// We start the consumers
+	go consumers.StartKafkaConsumer()
 
 	router := mux.NewRouter()
 	// configs.ConnectDB()
