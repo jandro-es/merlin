@@ -23,8 +23,10 @@ func main() {
 	// We start the consumers
 	go consumers.StartKafkaConsumer()
 
+	// We start the databases
+	configs.ConnectDB()
+
 	router := mux.NewRouter()
-	// configs.ConnectDB()
 	configs.ParseConfigurations()
 	configs.SetupFirebase()
 
